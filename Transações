@@ -1,0 +1,168 @@
+from pyspark.sql import functions as F
+
+
+# Quantidade de registros
+NUM_REGISTROS = 100_000_000
+
+
+# Criando IDs das transações
+df_transactions = (
+    spark.range(NUM_REGISTROS)
+    .withColumnRenamed("id", "transaction_id")
+)
+
+
+# Account_id
+# Simulando 1,5 milhão de contas existentes na tabela accounts
+df_transactions = df_transactions.withColumn(
+    "account_id",
+    (F.rand(seed=42) * 1_500_000 + 1).cast("long")
+)
+
+
+# Localização da transação
+# Simulando 50 mil locais:
+# agências, ATM, estabelecimentos, etc.
+df_transactions = df_transactions.withColumn(
+    "location_id",
+    (F.rand(seed=60) * 50_000 + 1).cast("long")
+)
+
+
+# Tipos de transação
+transaction_types = [
+    "PIX",
+    "TED",
+    "DOC",
+    "DEPOSITO",
+    "SAQUE",
+    "BOLETO",
+    "CARTAO_DEBITO",
+    "CARTAO_CREDITO",
+    "TRANSFERENCIA"
+]
+
+
+df_transactions = df_transactions.withColumn(
+    "transaction_type",
+    F.element_at(
+        F.array(
+            *[F.lit(x) for x in transaction_types]
+        ),
+        (F.rand(seed=10) * len(transaction_types) + 1)
+        .cast("int")
+    )
+)
+
+
+# Valores das transações
+df_transactions = df_transactions.withColumn(
+    "amount",
+    F.round(
+        (F.rand(seed=20) * 50000 + 5),
+        2
+    )
+)
+
+
+# Canais
+channels = [
+    "APP",
+    "INTERNET_BANKING",
+    "ATM",
+    "AGENCIA",
+    "API"
+]
+
+
+df_transactions = df_transactions.withColumn(
+    "channel",
+    F.element_at(
+        F.array(
+            *[F.lit(x) for x in channels]
+        ),
+        (F.rand(seed=30) * len(channels) + 1)
+        .cast("int")
+    )
+)
+
+
+# Descrição
+df_transactions = df_transactions.withColumn(
+    "description",
+    F.concat(
+        F.lit("Transação "),
+        F.col("transaction_type")
+    )
+)
+
+
+# Data da transação
+# Últimos 3 anos
+df_transactions = df_transactions.withColumn(
+    "transaction_date",
+    F.date_sub(
+        F.current_date(),
+        (F.rand(seed=100) * 1095).cast("int")
+    )
+)
+
+
+# Saldo após transação (simulado)
+df_transactions = df_transactions.withColumn(
+    "balance_after",
+    F.round(
+        F.rand(seed=40) * 100000,
+        2
+    )
+)
+
+
+# Status
+df_transactions = df_transactions.withColumn(
+    "status",
+    F.when(
+        F.rand(seed=50) <= 0.96,
+        "EFETIVADA"
+    )
+    .when(
+        F.rand(seed=50) <= 0.99,
+        "PENDENTE"
+    )
+    .otherwise(
+        "CANCELADA"
+    )
+)
+
+
+# Data de carga
+df_transactions = df_transactions.withColumn(
+    "created_at",
+    F.current_timestamp()
+)
+
+
+# Particionamento
+df_transactions = (
+    df_transactions
+    .withColumn(
+        "ano",
+        F.year("transaction_date")
+    )
+    .withColumn(
+        "mes",
+        F.month("transaction_date")
+    )
+)
+
+
+# Conferência
+display(
+    df_transactions.limit(10)
+)
+
+
+df_transactions.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable("bronze.default.transcactions")
