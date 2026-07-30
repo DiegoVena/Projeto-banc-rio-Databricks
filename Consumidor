@@ -1,0 +1,43 @@
+from faker import Faker
+import pandas as pd
+import random
+from datetime import datetime
+
+
+fake = Faker("pt_BR")
+
+# Quantidade de clientes
+num_records = 10000000
+
+
+customers = []
+
+for i in range(1, num_records + 1):
+
+    customer = {
+        "customer_id": i,
+        "name": fake.name(),
+        "cpf": fake.cpf(),
+        "birth_date": fake.date_of_birth(
+            minimum_age=18,
+            maximum_age=80
+        ),
+        "city": fake.city(),
+        "state": fake.estado_sigla(),
+        "created_at": fake.date_time_between(
+            start_date="-5y",
+            end_date="now"
+        )
+    }
+
+    customers.append(customer)
+
+
+df_customers = pd.DataFrame(customers)
+spark_df_customers.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable("bronze.default.customers")
+
+
+df_customers.head()
