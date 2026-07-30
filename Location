@@ -1,0 +1,79 @@
+from pyspark.sql import functions as F
+
+
+df_location = (
+    spark.range(50000)
+    .withColumnRenamed("id","location_id")
+    .withColumn(
+        "location_id",
+        F.col("location_id")+1
+    )
+    .withColumn(
+        "tipo_local",
+        F.element_at(
+            F.array(
+                F.lit("AGENCIA"),
+                F.lit("ATM"),
+                F.lit("ESTABELECIMENTO"),
+                F.lit("APP"),
+                F.lit("INTERNET_BANKING")
+            ),
+            (F.rand()*5+1).cast("int")
+        )
+    )
+    .withColumn(
+        "cidade",
+        F.element_at(
+            F.array(
+                F.lit("SAO PAULO"),
+                F.lit("RIO DE JANEIRO"),
+                F.lit("BELO HORIZONTE"),
+                F.lit("CURITIBA"),
+                F.lit("SALVADOR")
+            ),
+            (F.rand()*5+1).cast("int")
+        )
+    )
+    .withColumn(
+        "estado",
+        F.element_at(
+            F.array(
+                F.lit("SP"),
+                F.lit("RJ"),
+                F.lit("MG"),
+                F.lit("PR"),
+                F.lit("BA")
+            ),
+            (F.rand()*5+1).cast("int")
+        )
+    )
+    .withColumn(
+        "latitude",
+        F.round(
+            F.rand()*50-25,
+            6
+        )
+    )
+    .withColumn(
+        "longitude",
+        F.round(
+            F.rand()*80-60,
+            6
+        )
+    )
+    .withColumn(
+        "pais",
+        F.lit("BRASIL")
+    )
+    .withColumn(
+        "created_at",
+        F.current_timestamp()
+    )
+)
+
+
+display(df_location.limit(10))
+df_location.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable("bronze.default.location")
