@@ -1,0 +1,5 @@
+SELECT *
+
+FROM gold.default.customer_monthly_movement
+
+WHERE ticket_medio <= 0;
