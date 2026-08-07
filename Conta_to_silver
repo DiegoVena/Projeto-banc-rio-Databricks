@@ -1,0 +1,15 @@
+CREATE OR REPLACE TABLE silver.default.accounts
+USING DELTA
+AS
+SELECT account_id
+    , customer_id as id_cliente
+    , agency_id as agencia_id
+    ,  SPLIT_PART(account_number,'-', 1) as conta
+    , SPLIT_PART(account_number,'-', 2) as digito 
+    , upper(trim(account_type)) as Tipo_da_conta
+    , upper(trim(segment)) as segmento
+    , cast(opened_at as date) as data_abertura
+    , FLOOR(months_between(current_date(), opened_at)/12) as tempo_de_relacionamento 
+    , upper(trim(status)) as status
+FROM bronze.default.accounts
+where account_id is not null and customer_id is not null and agency_id is not null and account_number is not null and account_type is not null and segment is not null and opened_at is not null and status is not null
