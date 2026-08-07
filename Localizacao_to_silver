@@ -1,0 +1,21 @@
+
+CREATE OR REPLACE TABLE silver.default.location
+USING DELTA
+AS
+select location_id
+     , upper(trim(tipo_local)) as tipo_local
+     , upper(trim(cidade)) as cidade
+     , upper(trim(estado)) as estado
+     , latitude
+     , longitude
+     , pais
+     , cast(created_at as timestamp) as data_criacao
+     from bronze.default.location
+WHERE location_id is not null
+AND tipo_local is not null
+AND cidade is not null
+AND estado is not null
+AND latitude is not null
+AND longitude is not null
+AND pais is not null
+AND created_at is not null
