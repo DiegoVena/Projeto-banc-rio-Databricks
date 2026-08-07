@@ -1,0 +1,5 @@
+SELECT *
+
+FROM silver.default.transactions
+
+WHERE data_transacao > current_date();
