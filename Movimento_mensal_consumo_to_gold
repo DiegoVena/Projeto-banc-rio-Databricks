@@ -1,0 +1,112 @@
+-- Criação inicial da tabela Gold
+
+CREATE TABLE IF NOT EXISTS gold.default.customer_monthly_movement
+USING DELTA
+AS
+
+SELECT
+      c.customer_id,
+      YEAR(t.data_transacao) AS ano,
+      MONTH(t.data_transacao) AS mes,
+      COUNT(t.transaction_id) AS qtd_transacoes,
+      SUM(t.valor_movimento) AS valor_movimentado,
+      AVG(t.valor_movimento) AS ticket_medio,
+      t.data_transacao AS ultima_transacao,
+      current_timestamp() AS data_processamento
+
+FROM silver.default.transactions t
+
+INNER JOIN silver.default.accounts a
+ON t.account_id = a.account_id
+
+INNER JOIN silver.default.customers c
+ON a.id_cliente = c.customer_id
+
+WHERE t.status = 'EFETIVADA'
+
+GROUP BY
+      c.customer_id,
+      t.data_transacao;
+
+
+
+-- View incremental (últimas cargas)
+
+CREATE OR REPLACE TEMP VIEW vw_customer_monthly_movement_incremental
+AS
+
+SELECT
+      c.customer_id,
+      YEAR(t.data_transacao) AS ano,
+      MONTH(t.data_transacao) AS mes,
+      COUNT(t.transaction_id) AS qtd_transacoes,
+      SUM(t.valor_movimento) AS valor_movimentado,
+      AVG(t.valor_movimento) AS ticket_medio,
+      t.data_transacao AS ultima_transacao,
+      current_timestamp() AS data_processamento
+
+FROM silver.default.transactions t
+
+INNER JOIN silver.default.accounts a
+ON t.account_id = a.account_id
+
+INNER JOIN silver.default.customers c
+ON a.id_cliente = c.customer_id
+
+WHERE t.data_criacao >= current_timestamp() - INTERVAL 1 DAY
+
+AND t.status = 'EFETIVADA'
+
+GROUP BY
+      c.customer_id,
+      t.data_transacao;
+
+
+
+-- Atualização incremental
+
+MERGE INTO gold.default.customer_monthly_movement AS target
+
+USING vw_customer_monthly_movement_incremental AS source
+
+ON target.customer_id = source.customer_id
+AND target.ano = source.ano
+AND target.mes = source.mes
+
+
+WHEN MATCHED THEN UPDATE SET
+
+target.qtd_transacoes = source.qtd_transacoes,
+target.valor_movimentado = source.valor_movimentado,
+target.ticket_medio = source.ticket_medio,
+target.ultima_transacao = source.ultima_transacao,
+target.data_processamento = source.data_processamento
+
+
+WHEN NOT MATCHED THEN INSERT
+(
+ customer_id,
+ ano,
+ mes,
+ qtd_transacoes,
+ valor_movimentado,
+ ticket_medio,
+ ultima_transacao,
+ data_processamento
+)
+
+VALUES
+(
+ source.customer_id,
+ source.ano,
+ source.mes,
+ source.qtd_transacoes,
+ source.valor_movimentado,
+ source.ticket_medio,
+ source.ultima_transacao,
+ source.data_processamento
+);
+
+
+
+select * from gold.default.customer_monthly_movement
