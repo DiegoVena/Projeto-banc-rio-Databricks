@@ -1,0 +1,14 @@
+SELECT
+    customer_id,
+    ano,
+    mes,
+    COUNT(*) AS quantidade
+
+FROM gold.default.customer_monthly_movement
+
+GROUP BY
+    customer_id,
+    ano,
+    mes
+
+HAVING COUNT(*) > 1;
