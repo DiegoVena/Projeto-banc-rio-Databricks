@@ -1,0 +1,27 @@
+CREATE OR REPLACE TABLE silver.default.transactions
+USING DELTA
+PARTITIONED BY (ano, mes)
+AS
+
+SELECT
+      transaction_id
+    , account_id
+    , location_id
+    , upper(trim(transaction_type)) as tipo_de_transacao
+    , cast(amount as decimal(18,2)) as valor_movimento
+    , upper(trim(channel)) as canal
+    , upper(trim(description)) as descricao
+    , cast(transaction_date as date) as data_transacao
+    , cast(balance_after as decimal(18,2)) as saldo_restante
+    , upper(trim(status)) as status
+    , cast(created_at as timestamp) as data_criacao
+    , year(transaction_date) as ano
+    , month(transaction_date) as mes
+
+FROM bronze.default.transcactions
+
+WHERE transaction_id is not null
+AND account_id is not null
+AND location_id is not null
+AND amount is not null
+AND transaction_date is not null;
