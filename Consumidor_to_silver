@@ -1,0 +1,28 @@
+-- camada bronze 
+CREATE OR REPLACE TABLE silver.default.customers
+USING DELTA
+AS
+select customer_id
+     , cpf
+     , data_nascimento
+     , idade
+     , cidade
+     , estado
+     , created_at  
+from (
+    select
+          customer_id,
+          regexp_replace(cpf,'[^0-9]','') as cpf,
+          cast(birth_date as date) as data_nascimento,
+            FLOOR(months_between(current_date(), birth_date)/12) as idade ,
+          upper(trim(city)) as cidade,
+          upper(trim(state)) as estado,
+          created_at,
+          row_number() over(
+              partition by customer_id
+              order by created_at desc
+          ) as rn
+    from bronze.default.customers
+    where cpf is not null and customer_id is not null and birth_date is not null and city is not null and state is not null and created_at is not null 
+)
+where rn = 1;
